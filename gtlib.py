@@ -3,13 +3,17 @@ import re
 import sys
 import collections
 import argparse
-import configparser
 import hashlib
 import zlib
+import gitrepo
 
 argparser = argparse.ArgumentParser(description='Execute git command')
+
 argsubparsers = argparser.add_subparsers(title='Commands', dest='command')
 argsubparsers.required = True
+
+initsp = argsubparsers.add_parser('init', help='Initialize a new, empty repository')
+initsp.add_argument('path', metavar='directory', nargs='?', default='.', help='Location where to create the repository')
 
 def main():
     args = argparser.parse_args(sys.argv[1:])
@@ -29,3 +33,5 @@ def main():
     elif args.command == 'tag'          : cmd_tag(args)
 
 
+def cmd_init(args):
+    gitrepo.GitRepository(args.path)
