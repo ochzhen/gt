@@ -7,15 +7,9 @@ import hashlib
 import zlib
 import gitrepo
 
-argparser = argparse.ArgumentParser(description='Execute git command')
-
-argsubparsers = argparser.add_subparsers(title='Commands', dest='command')
-argsubparsers.required = True
-
-initsp = argsubparsers.add_parser('init', help='Initialize a new, empty repository')
-initsp.add_argument('path', metavar='directory', nargs='?', default='.', help='Location where to create the repository')
 
 def main():
+    argparser = create_argparser()
     args = argparser.parse_args(sys.argv[1:])
     if   args.command == 'add'          : cmd_add(args)
     elif args.command == 'cat-file'     : cmd_cat_file(args)
@@ -32,6 +26,25 @@ def main():
     elif args.command == 'show-ref'     : cmd_show_ref(args)
     elif args.command == 'tag'          : cmd_tag(args)
 
+def create_argparser():
+    parser = argparse.ArgumentParser(description='Execute git command')
+
+    subparsers = parser.add_subparsers(title='Commands', dest='command')
+    subparsers.required = True
+
+    initsp = subparsers.add_parser('init', help='Initialize new repository')
+    initsp.add_argument('path', metavar='directory', nargs='?', default='.', help='Location where to create the repository')
+
+    catfilesp = subparsers.add_parser('cat-file', help='View content of repository object')
+    catfilesp.add_argument('type', metavar='type', choices=['blob', 'commit', 'tag', 'tree'], help='Specify type')
+    catfilesp.add_argument('object', metavar='object', help='The object to display')
+
 
 def cmd_init(args):
     gitrepo.GitRepository(args.path)
+
+
+def cmd_cat_file(args):
+    repo = gitrepo.get_current_repo()
+    obj = repo.read_object()
+    sys.stdout.buffer.write(obj.serialize())
