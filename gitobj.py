@@ -1,15 +1,8 @@
 from abc import ABC, abstractmethod, abstractproperty
 
-git_object_types = {
-    'blob': GitBlob,
-    'commit': GitCommit,
-    'tag': GitTag,
-    'tree': GitTree
-}
 
 class GitObject(ABC):
     def __init__(self, data=None):
-        self.repo = repo
         if data is not None:
             self.deserialize(data)
     
@@ -24,6 +17,11 @@ class GitObject(ABC):
     @abstractmethod
     def deserialize(self, data):
         pass
+
+    def bcontent(self) -> bytes:
+        data = self.serialize()
+        content = self.btype + b' ' + str(len(data)).encode() + b'\x00' + data
+        return content
 
 
 class GitBlob(GitObject):
@@ -48,3 +46,11 @@ class GitTag(GitObject):
 
 class GitTree(GitObject):
     pass
+
+
+git_object_types = {
+    'blob': GitBlob,
+    'commit': GitCommit,
+    'tag': GitTag,
+    'tree': GitTree
+}

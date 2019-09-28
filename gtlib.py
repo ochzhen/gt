@@ -6,6 +6,8 @@ import argparse
 import hashlib
 import zlib
 import gitrepo
+import gitobj
+from common import compute_sha1
 
 
 def main():
@@ -39,6 +41,13 @@ def create_argparser():
     catfilesp.add_argument('type', metavar='type', choices=['blob', 'commit', 'tag', 'tree'], help='Specify type')
     catfilesp.add_argument('object', metavar='object', help='The object to display')
 
+    hashobjsp = subparsers.add_parser('hash-object', help='Compute object hash and optionally create a blob from file')
+    hashobjsp.add_argument('-t', metavar='type', dest='type', choices=['blob', 'commit', 'tag', 'tree'], default='blob', help='Specify type')
+    hashobjsp.add_argument('-w', dest='dry_run', action='store_false', help='Write the object to the database')
+    hashobjsp.add_argument('path', help='Read object from <file>')
+
+    return parser
+
 
 def cmd_init(args):
     gitrepo.GitRepository(args.path)
@@ -48,3 +57,23 @@ def cmd_cat_file(args):
     repo = gitrepo.get_current_repo()
     obj = repo.read_object()
     sys.stdout.buffer.write(obj.serialize())
+
+
+def cmd_hash_object(args):
+    with open(args.path, 'rb') as f:
+        obj = create_object(f.read(), args.type)
+    
+    if args.dry_run:
+        sha = compute_sha1(obj.bcontent())
+    else:
+        repo = gitrepo.get_current_repo()
+        sha = repo.write_object(obj)
+
+    print(sha)
+
+
+def create_object(data: bytes, type_name: str) -> gitobj.GitObject:
+    if type_name not in gitobj.git_object_types:
+        raise Exception(f'Unknown object type {type_name}')
+    obj_type = gitobj.git_object_types[type_name]
+    return obj_type(data)

@@ -3,7 +3,7 @@ import configparser
 import zlib
 import hashlib
 import gitobj
-from common import ensure_empty_dir, ensure_dir
+from common import ensure_empty_dir, ensure_dir, compute_sha1
 
 
 class GitRepository:
@@ -76,9 +76,8 @@ class GitRepository:
             return obj_type(raw[content_idx:])
     
     def write_object(self, obj: gitobj.GitObject):
-        data = obj.serialize()
-        content = obj.btype + b' ' + str(len(data)).encode() + b'\x00' + data
-        sha = hashlib.sha1(content).hexdigest()
+        content = obj.bcontent()
+        sha = compute_sha1(content)
         
         dirname, filename = parse_sha(sha)
         dirpath = self.path_in_gitdir('objects', dirname)

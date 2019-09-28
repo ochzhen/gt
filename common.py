@@ -1,4 +1,5 @@
 import os
+import hashlib
 
 
 def ensure_empty_dir(path):
@@ -17,3 +18,6 @@ def ensure_dir(path):
             raise Exception(f'Not a directory: {path}')
     else:
         os.makedirs(path)
+
+def compute_sha1(content) -> str:
+    return hashlib.sha1(content).hexdigest()
