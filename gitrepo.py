@@ -51,7 +51,7 @@ class GitRepository:
         '''Compute path relative to gitdir'''
         return os.path.join(self.gitdir, *paths)
     
-    def read_object(self, sha):
+    def read_object(self, sha: str) -> gitobj.GitObject:
         dirname, filename = parse_sha(sha)
         path = self.path_in_gitdir('objects', dirname, filename)
         if not os.path.exists(path):

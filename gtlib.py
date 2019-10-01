@@ -46,6 +46,9 @@ def create_argparser():
     hashobjsp.add_argument('-w', dest='dry_run', action='store_false', help='Write the object to the database')
     hashobjsp.add_argument('path', help='Read object from <file>')
 
+    logsp = subparsers.add_parser('log', help='Display history of a given commit')
+    logsp.add_argument('commit', default='HEAD', nargs='?', help='Commit whose history to display')
+
     return parser
 
 
@@ -77,3 +80,26 @@ def create_object(data: bytes, type_name: str) -> gitobj.GitObject:
         raise Exception(f'Unknown object type {type_name}')
     obj_type = gitobj.git_object_types[type_name]
     return obj_type(data)
+
+
+def cmd_log(args):
+    print('digraph gtlog{')
+    log_graphviz(gitrepo.get_current_repo(), args.commit, set())
+    print('}')
+
+
+def log_graphviz(repo: gitrepo.GitRepository, sha: str, hs: set):
+    if sha in hs:
+        return
+    hs.add(sha)
+    commit = repo.read_object(sha)
+    assert(commit.btype == b'commit')
+
+    if b'parent' not in commit.data:
+        return
+    
+    parents = commit.data[b'parent']
+    for p in parents:
+        parent_sha = p.decode("ascii")
+        print(f'c_{sha} -> c_{parent_sha};')
+        log_graphviz(repo, parent_sha, hs)
