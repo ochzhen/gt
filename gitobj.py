@@ -54,30 +54,32 @@ class GitCommit(GitObject):
         return b''.join(buffer)
     
     def deserialize(self, data):
-        self.data = collections.OrderedDict()
-        self._parse(data, 0, self.data)
-
-    def _parse(self, data, start_idx, ord_dict):
-        space_idx = data.find(b' ', start_idx)
-        newline_idx = data.find(b'\n', start_idx)
-
-        if space_idx < 0 or newline_idx < space_idx:
-            assert(newline_idx == start_idx)
-            ord_dict[b''] = data[start_idx+1:]
-            return
+        ord_dict = collections.OrderedDict()
         
-        key = data[start_idx:space_idx]
-        end_idx = data.find(b'\n', start_idx + 1)
-        while data[end_idx + 1] == ord(' '):
-            end_idx = data.find(b'\n', end_idx + 1)
-        value = data[space_idx + 1: end_idx].replace(b'\n ', b'\n')
+        def parse(self, data, start_idx):
+            space_idx = data.find(b' ', start_idx)
+            newline_idx = data.find(b'\n', start_idx)
 
-        if key in ord_dict:
-            ord_dict[key].append(value)
-        else:
-            ord_dict[key] = [value]
+            if space_idx < 0 or newline_idx < space_idx:
+                assert(newline_idx == start_idx)
+                ord_dict[b''] = data[start_idx+1:]
+                return
+            
+            key = data[start_idx:space_idx]
+            end_idx = data.find(b'\n', start_idx + 1)
+            while data[end_idx + 1] == ord(' '):
+                end_idx = data.find(b'\n', end_idx + 1)
+            value = data[space_idx + 1: end_idx].replace(b'\n ', b'\n')
+
+            if key in ord_dict:
+                ord_dict[key].append(value)
+            else:
+                ord_dict[key] = [value]
+            
+            return self._parse(data, end_idx + 1)
         
-        return self._parse(data, end_idx + 1, ord_dict)
+        parse(data, 0)
+        self.data = ord_dict
 
 
 class GitTag(GitObject):
@@ -85,7 +87,36 @@ class GitTag(GitObject):
 
 
 class GitTree(GitObject):
-    pass
+    @property
+    def btype(self):
+        return b'tree'
+
+    def serialize(self) -> bytes:
+        buffer = []
+        for item in self.items:
+            sha_num = int(item.sha, 16)
+            sha_bytes = sha_num.to_bytes(20, byteorder='big')
+            buffer.extend((item.mode, b' ', item.path, b'\x00', sha_bytes))
+        return b''.join(buffer)
+    
+    def deserialize(self, data):
+        self.items = []
+        idx = 0
+        while idx < len(data):
+            space_idx = data.find(b' ', idx)
+            mode = data[idx:space_idx]
+            null_idx = data.find(b'\x00', space_idx)
+            path = data[space_idx + 1:null_idx]
+            sha_num = int.from_bytes(data[null_idx + 1:null_idx + 21], 'big')
+            sha = hex(sha_num)[2:]
+            self.items.append(GitTree.GitTreeItem(mode, path, sha))
+            idx = null_idx + 21
+    
+    class GitTreeItem:
+        def __init__(self, mode, path, sha):
+            self.mode = mode
+            self.path = path
+            self.sha = sha
 
 
 git_object_types = {

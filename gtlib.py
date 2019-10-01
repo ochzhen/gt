@@ -49,6 +49,9 @@ def create_argparser():
     logsp = subparsers.add_parser('log', help='Display history of a given commit')
     logsp.add_argument('commit', default='HEAD', nargs='?', help='Commit whose history to display')
 
+    lstreesp = subparsers.add_parser('ls-tree', help='Print tree object')
+    lstreesp.add_argument('object', help='An object to show')
+
     return parser
 
 
@@ -103,3 +106,12 @@ def log_graphviz(repo: gitrepo.GitRepository, sha: str, hs: set):
         parent_sha = p.decode("ascii")
         print(f'c_{sha} -> c_{parent_sha};')
         log_graphviz(repo, parent_sha, hs)
+
+
+def cmd_ls_tree(args):
+    repo = gitrepo.get_current_repo()
+    tree_obj = repo.read_object(args.object)
+    for item in tree_obj.items:
+        mode_str = '0' * (6 - len(item.mode)) + item.mode.decode('ascii')
+        obj_type = repo.read_object(item.sha).btype.decode('ascii')
+        print(f'{mode_str} {obj_type} {item.sha}\t{item.path.decode("ascii")}')
