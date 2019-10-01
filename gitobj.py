@@ -1,3 +1,4 @@
+import collections
 from abc import ABC, abstractmethod, abstractproperty
 
 
@@ -37,7 +38,46 @@ class GitBlob(GitObject):
 
 
 class GitCommit(GitObject):
-    pass
+    @property
+    def btype(self):
+        return b'commit'
+    
+    def serialize(self):
+        buffer = []
+        for key in self.data.keys():
+            if key == b'':
+                continue
+            values = self.data[key]
+            for val in values:
+                buffer.extend((key, b' ', val.replace(b'\n', b'\n '), b'\n'))
+        buffer.extend((b'\n', self.data[b'']))
+        return b''.join(buffer)
+    
+    def deserialize(self, data):
+        self.data = collections.OrderedDict()
+        self._parse(data, 0, self.data)
+
+    def _parse(self, data, start_idx, ord_dict):
+        space_idx = data.find(b' ', start_idx)
+        newline_idx = data.find(b'\n', start_idx)
+
+        if space_idx < 0 or newline_idx < space_idx:
+            assert(newline_idx == start_idx)
+            ord_dict[b''] = data[start_idx+1:]
+            return
+        
+        key = data[start_idx:space_idx]
+        end_idx = data.find(b'\n', start_idx + 1)
+        while data[end_idx + 1] == ord(' '):
+            end_idx = data.find(b'\n', end_idx + 1)
+        value = data[space_idx + 1: end_idx].replace(b'\n ', b'\n')
+
+        if key in ord_dict:
+            ord_dict[key].append(value)
+        else:
+            ord_dict[key] = [value]
+        
+        return self._parse(data, end_idx + 1, ord_dict)
 
 
 class GitTag(GitObject):
