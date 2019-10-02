@@ -1,5 +1,6 @@
 import os
 import hashlib
+import gitobj
 
 
 def ensure_empty_dir(path):
@@ -19,5 +20,18 @@ def ensure_dir(path):
     else:
         os.makedirs(path)
 
+
 def compute_sha1(content) -> str:
     return hashlib.sha1(content).hexdigest()
+
+
+def is_blob(obj):
+    return isinstance(obj, gitobj.GitBlob)
+
+
+def is_commit(obj):
+    return isinstance(obj, gitobj.GitCommit)
+
+
+def is_tree(obj):
+    return isinstance(obj, gitobj.GitTree)

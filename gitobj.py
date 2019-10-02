@@ -80,6 +80,10 @@ class GitCommit(GitObject):
         
         parse(data, 0)
         self.data = ord_dict
+    
+    def tree_sha(self):
+        trees = self.data[b'tree']
+        return trees[0].decode('ascii')
 
 
 class GitTag(GitObject):
@@ -125,3 +129,7 @@ git_object_types = {
     'tag': GitTag,
     'tree': GitTree
 }
+
+
+def find_object_sha(repo, identifier):
+    return identifier

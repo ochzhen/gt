@@ -7,7 +7,7 @@ import hashlib
 import zlib
 import gitrepo
 import gitobj
-from common import compute_sha1
+from common import compute_sha1, is_blob, is_commit, is_tree
 
 
 def main():
@@ -51,6 +51,10 @@ def create_argparser():
 
     lstreesp = subparsers.add_parser('ls-tree', help='Print tree object')
     lstreesp.add_argument('object', help='An object to show')
+    
+    checkoutsp = subparsers.add_parser('checkout', help='Checkout commit in a directory')
+    checkoutsp.add_argument('commit', help='Commit to checkout')
+    checkoutsp.add_argument('path', help='An empty directory to checkout')
 
     return parser
 
@@ -61,8 +65,38 @@ def cmd_init(args):
 
 def cmd_cat_file(args):
     repo = gitrepo.get_current_repo()
-    obj = repo.read_object()
+    obj = repo.read_object(args.object)
     sys.stdout.buffer.write(obj.serialize())
+
+
+def cmd_checkout(args):
+    repo = gitrepo.get_current_repo()
+    obj = repo.read_object(args.commit)
+    
+    if is_commit(obj):
+        obj = repo.read_object(obj.tree_sha())
+
+    if os.path.exists(args.path):
+        if not os.path.isdir(args.path):
+            raise Exception(f'Not a directory: {args.path}')
+        if os.listdir(args.path):
+            raise Exception(f'Directory is not empty: {args.parse}')
+    else:
+        os.makedirs(args.path)
+    
+    checkout_tree(repo, obj, args.path)
+    
+
+def checkout_tree(repo, tree, path):
+    for item in tree.items:
+        obj = repo.read_object(item.sha)
+        dest = os.path.join(path, item.path)
+        if is_tree(obj):
+            os.mkdir(dest)
+            checkout_tree(repo, obj, dest)
+        elif is_blob(obj):
+            with open(dest, 'wb') as f:
+                f.write(obj.blobdata)
 
 
 def cmd_hash_object(args):
@@ -96,7 +130,7 @@ def log_graphviz(repo: gitrepo.GitRepository, sha: str, hs: set):
         return
     hs.add(sha)
     commit = repo.read_object(sha)
-    assert(commit.btype == b'commit')
+    assert(is_commit(commit))
 
     if b'parent' not in commit.data:
         return
